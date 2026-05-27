@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reposição de Estoque</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f5f4f1;--surface:#ffffff;--surface2:#f0efe9;--border:#e2e0d8;--border2:#d4d2c8;--text:#1a1916;--text2:#6b6860;--text3:#9b9890;--accent:#2d5a3d;--accent-light:#e8f0ea;--danger:#c0392b;--danger-light:#fdf0ee;--warning:#b7860b;--warning-light:#fdf6e3;--success:#2d5a3d;--success-light:#e8f0ea;--radius:10px;--radius-sm:6px;--shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 12px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.04);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+.app{display:flex;flex-direction:column;min-height:100vh;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.topbar-logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;color:var(--text);}
+.topbar-logo i{font-size:20px;color:var(--accent);}
+.base-pill{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:12px;font-weight:500;background:var(--success-light);color:var(--success);border:1px solid #b8d4bf;}
+.base-pill.empty{background:var(--surface2);color:var(--text2);border-color:var(--border);}
+.main{flex:1;padding:2rem;max-width:1300px;margin:0 auto;width:100%;}
+.tabs{display:flex;gap:1px;background:var(--border);border-radius:var(--radius-sm);width:fit-content;margin-bottom:1.75rem;overflow:hidden;}
+.tab{padding:8px 20px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);border:none;background:var(--surface2);transition:all .15s;display:flex;align-items:center;gap:6px;}
+.tab:hover{background:var(--surface);color:var(--text);}
+.tab.active{background:var(--surface);color:var(--text);}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;box-shadow:var(--shadow);}
+.card+.card{margin-top:1rem;}
+.label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.75rem;}
+.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.upload-box{border:1.5px dashed var(--border2);border-radius:var(--radius);padding:1.25rem;text-align:center;cursor:pointer;position:relative;transition:all .2s;background:var(--bg);}
+.upload-box:hover{border-color:var(--accent);background:var(--accent-light);}
+.upload-box.loaded{border-style:solid;border-color:var(--accent);background:var(--accent-light);}
+.upload-box input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.upload-icon{font-size:24px;color:var(--text3);margin-bottom:6px;display:block;}
+.upload-box.loaded .upload-icon,.upload-box:hover .upload-icon{color:var(--accent);}
+.upload-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;}
+.upload-hint{font-size:11px;color:var(--text2);}
+.upload-box.loaded .upload-hint{color:var(--accent);font-weight:500;}
+.upload-optional{font-size:10px;color:var(--text3);margin-top:3px;}
+.config-grid{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;}
+.ctrl{display:flex;flex-direction:column;gap:5px;}
+.ctrl label{font-size:12px;font-weight:500;color:var(--text2);}
+.ctrl input{height:38px;padding:0 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text);outline:none;transition:border .15s;}
+.ctrl input:focus{border-color:var(--accent);}
+.ctrl-info{height:38px;display:flex;align-items:center;}
+.ctrl-info-val{font-size:20px;font-weight:600;color:var(--text);font-family:'DM Mono',monospace;}
+.ctrl-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.formula{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);font-size:12px;color:var(--text2);margin-top:1rem;}
+.formula strong{color:var(--text);font-family:'DM Mono',monospace;font-weight:500;}
+.btn{height:38px;padding:0 20px;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:7px;transition:all .15s;white-space:nowrap;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:#234a30;}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border2);font-size:13px;height:34px;padding:0 14px;}
+.btn-outline:hover{background:var(--surface2);}
+.btn-outline.green{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-outline.green:hover{background:#234a30;}
+.btn-danger{background:var(--danger-light);color:var(--danger);border:1px solid #f0c4be;font-size:12px;height:30px;padding:0 10px;border-radius:var(--radius-sm);cursor:pointer;font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:5px;}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem;}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;}
+.stat-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+.stat-value{font-size:28px;font-weight:600;color:var(--text);font-family:'DM Mono',monospace;line-height:1;}
+.stat-value.red{color:var(--danger);}
+.stat-value.yellow{color:var(--warning);}
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;}
+.filters{display:flex;gap:5px;flex-wrap:wrap;}
+.filter-btn{font-size:12px;padding:5px 13px;border-radius:99px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.filter-btn:hover{border-color:var(--accent);color:var(--accent);}
+.filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.actions{display:flex;gap:6px;}
+.acc-list{display:flex;flex-direction:column;gap:6px;}
+.acc{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:box-shadow .2s;}
+.acc:hover{box-shadow:var(--shadow-md);}
+.acc-hdr{display:flex;align-items:center;padding:13px 16px;cursor:pointer;gap:12px;user-select:none;}
+.acc-spu{font-size:11px;font-weight:600;color:var(--text3);font-family:'DM Mono',monospace;min-width:90px;}
+.acc-name{font-size:14px;font-weight:500;color:var(--text);flex:1;}
+.acc-meta{display:flex;align-items:center;gap:8px;}
+.acc-chevron{font-size:16px;color:var(--text3);transition:transform .2s;}
+.acc-hdr.open .acc-chevron{transform:rotate(180deg);}
+.acc-body{display:none;border-top:1px solid var(--border);}
+.acc-body.open{display:block;}
+.tbl-wrap{overflow-x:auto;}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;}
+.tbl thead th{background:var(--surface2);padding:8px 12px;text-align:left;font-weight:600;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);white-space:nowrap;}
+.tbl tbody td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;white-space:nowrap;}
+.tbl tbody tr:last-child td{border-bottom:none;}
+.tbl tbody tr:hover{background:var(--bg);}
+.mono{font-family:'DM Mono',monospace;font-size:12px;}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;}
+.badge-danger{background:var(--danger-light);color:var(--danger);}
+.badge-warning{background:var(--warning-light);color:var(--warning);}
+.badge-success{background:var(--success-light);color:var(--success);}
+/* Curva ABC badges */
+.badge-a{background:#1a2e1a;color:#fff;}
+.badge-b{background:#2d5a3d;color:#fff;}
+.badge-c{background:var(--surface2);color:var(--text2);border:1px solid var(--border2);}
+.dias-in{width:54px;text-align:center;font-size:13px;padding:4px 6px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:'DM Mono',monospace;background:var(--surface);color:var(--text);}
+.dias-in:focus{outline:none;border-color:var(--accent);}
+.obs-in{width:160px;font-size:12px;padding:4px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;}
+.obs-in:focus{outline:none;border-color:var(--accent);}
+.prod-pos{font-weight:700;color:var(--danger);font-family:'DM Mono',monospace;}
+.prod-zero{color:var(--success);font-size:15px;}
+.cob-danger{color:var(--danger);font-weight:600;}
+.cob-warning{color:var(--warning);font-weight:600;}
+.base-info{display:flex;align-items:center;gap:12px;padding:1rem 1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);margin-bottom:1.5rem;}
+.base-info.ok{background:var(--success-light);border-color:#b8d4bf;}
+.alert{padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:1rem;display:flex;align-items:center;gap:8px;}
+.alert-success{background:var(--success-light);color:var(--success);border:1px solid #b8d4bf;}
+.empty{text-align:center;padding:4rem 1rem;color:var(--text2);}
+.empty i{font-size:40px;margin-bottom:1rem;display:block;color:var(--text3);}
+.empty h3{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text);}
+.preview-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:1rem;}
+.page{display:none;}.page.active{display:block;}
+.abc-legend{display:flex;gap:12px;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);font-size:12px;color:var(--text2);margin-bottom:1rem;flex-wrap:wrap;}
+.abc-legend-item{display:flex;align-items:center;gap:5px;}
+@media(max-width:768px){.main{padding:1rem;}.config-grid{grid-template-columns:1fr 1fr;}.stats-grid{grid-template-columns:repeat(2,1fr);}.acc-spu{display:none;}.upload-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="topbar-logo"><i class="ti ti-packages"></i>Reposição de Estoque</div>
+    <div class="base-pill empty" id="topPill"><i class="ti ti-database"></i><span id="topPillTxt">Base não carregada</span></div>
+  </header>
+  <main class="main">
+    <div class="tabs">
+      <button class="tab active" onclick="setTab('analise')"><i class="ti ti-chart-bar"></i>Análise</button>
+      <button class="tab" onclick="setTab('base')"><i class="ti ti-database"></i>Base de SKUs</button>
+    </div>
+
+    <div class="page active" id="page-analise">
+      <div id="baseStatusBar"></div>
+
+      <div class="card" style="margin-bottom:1rem;">
+        <div class="label">Arquivos</div>
+        <div class="upload-grid">
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px;">RELATÓRIO DO ARMAZÉM <span style="color:var(--danger);">*</span></div>
+            <div class="upload-box" id="boxArmazem">
+              <input type="file" accept=".xlsx,.xls" onchange="handleArmazem(this)">
+              <i class="ti ti-building-warehouse upload-icon"></i>
+              <div class="upload-name">Arraste o arquivo aqui</div>
+              <div class="upload-hint" id="subArmazem">Estoque + média diária — .xlsx</div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px;">VENDAS POR VARIANTE <span style="font-weight:400;color:var(--text3);">(opcional — para curva ABC)</span></div>
+            <div class="upload-box" id="boxVendas">
+              <input type="file" accept=".xlsx,.xls" onchange="handleVendas(this)">
+              <i class="ti ti-chart-bar upload-icon"></i>
+              <div class="upload-name">Arraste o arquivo aqui</div>
+              <div class="upload-hint" id="subVendas">Vendas por Variante — .xlsx</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="label">Configuração</div>
+        <div class="config-grid">
+          <div class="ctrl"><label for="diasPadrao">Dias de cobertura alvo</label><input type="number" id="diasPadrao" placeholder="ex: 45" min="1" oninput="updateFormula()"><span class="ctrl-sub">Quantos dias de estoque quer ter</span></div>
+          <div class="ctrl"><label for="leadTime">Lead time de produção</label><input type="number" id="leadTime" value="20" min="0" oninput="updateFormula()"><span class="ctrl-sub">Dias até o produto ficar pronto</span></div>
+          <div class="ctrl"><label>Necessidade real</label><div class="ctrl-info"><span class="ctrl-info-val" id="coberturaReal">— dias</span></div><span class="ctrl-sub">Cobertura alvo + lead time</span></div>
+          <div style="display:flex;align-items:flex-end;"><button class="btn btn-primary" id="btnProcessar" onclick="processar()" disabled><i class="ti ti-refresh"></i>Processar</button></div>
+        </div>
+        <div class="formula"><i class="ti ti-math-function"></i>Produzir = (Média diária × <strong id="fDias">—</strong>) − Estoque atual − Em trânsito</div>
+      </div>
+
+      <div id="resultado" style="display:none;">
+        <div class="stats-grid" id="statsGrid"></div>
+        <div id="abcLegend" style="display:none;" class="abc-legend">
+          <strong style="color:var(--text);">Curva ABC:</strong>
+          <div class="abc-legend-item"><span class="badge badge-a">A</span> Top 80% das vendas</div>
+          <div class="abc-legend-item"><span class="badge badge-b">B</span> Próximos 15%</div>
+          <div class="abc-legend-item"><span class="badge badge-c">C</span> Últimos 5%</div>
+          <span style="color:var(--text3);margin-left:4px;">— % = participação no período</span>
+        </div>
+        <div class="toolbar">
+          <div class="filters" id="filterRow"></div>
+          <div class="actions">
+            <button class="btn btn-outline" onclick="toggleAll(true)"><i class="ti ti-chevrons-down"></i>Expandir</button>
+            <button class="btn btn-outline" onclick="toggleAll(false)"><i class="ti ti-chevrons-up"></i>Recolher</button>
+            <button class="btn btn-outline green" onclick="exportarXLSX()"><i class="ti ti-file-spreadsheet"></i>Exportar XLSX</button>
+          </div>
+        </div>
+        <div class="acc-list" id="accordionList"></div>
+      </div>
+      <div id="emptyState" class="empty"><i class="ti ti-packages"></i><h3>Aguardando dados</h3><p>Carregue a base de SKUs e faça upload do Relatório do Armazém</p></div>
+    </div>
+
+    <div class="page" id="page-base">
+      <div id="alertBase"></div>
+      <div class="base-info" id="baseInfo">
+        <i class="ti ti-database" style="font-size:22px;color:var(--text3);"></i>
+        <div style="flex:1;"><div style="font-size:14px;font-weight:600;">Nenhuma base carregada</div><div style="font-size:12px;color:var(--text2);">Faça o upload abaixo para salvar permanentemente</div></div>
+      </div>
+      <div class="card">
+        <div class="label">Carregar base de SKUs</div>
+        <div class="upload-box" id="boxBase">
+          <input type="file" accept=".xlsx,.xls" onchange="handleBase(this)">
+          <i class="ti ti-table upload-icon"></i>
+          <div class="upload-name">export_warehouse_products.xlsx</div>
+          <div class="upload-hint" id="subBase">Arraste ou clique — substitui a base atual</div>
+        </div>
+        <p style="font-size:12px;color:var(--text3);margin-top:.75rem;">Colunas: <strong>SKU · SPU · Título · Variante1 (Cor) · Variante2 (Tamanho)</strong></p>
+      </div>
+      <div id="basePreview" style="display:none;margin-top:1rem;">
+        <div class="label">Prévia — <span id="previewCount">0</span> SKUs</div>
+        <div class="preview-wrap"><table class="tbl"><thead><tr><th>SKU</th><th>SPU</th><th>Produto</th><th>Cor</th><th>Tamanho</th></tr></thead><tbody id="previewBody"></tbody></table></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+let dataArmazem=null,dataVendas=null,grupos=[],filtroAtivo='todos',baseSkus={};
+let mapCurvaABC={};
+
+function salvarBase(d){try{localStorage.setItem('reposicao_base_skus',JSON.stringify(d));return true;}catch(e){return false;}}
+function carregarBase(){try{const v=localStorage.getItem('reposicao_base_skus');return v?JSON.parse(v):null;}catch(e){return null;}}
+function limparBase(){try{localStorage.removeItem('reposicao_base_skus');}catch(e){}}
+
+(function(){
+  updateFormula();
+  const saved=carregarBase();
+  if(saved){baseSkus=saved;updateBaseUI();checkBtn();}
+})();
+
+function setTab(t){
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',['analise','base'][i]===t));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+t).classList.add('active');
+}
+
+function handleBase(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const wb=XLSX.read(e.target.result,{type:'array'});
+    const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+    const map={};
+    for(const row of json){
+      const sku=String(row['SKU']||'').trim();if(!sku)continue;
+      map[sku]={spu:String(row['SPU']||'').trim(),titulo:String(row['Título']||'').trim(),cor:String(row['Variante1']||'').trim(),tamanho:String(row['Variante2']||'').trim()};
+    }
+    const ok=salvarBase(map);
+    baseSkus=map;
+    document.getElementById('boxBase').classList.add('loaded');
+    document.querySelector('#boxBase .upload-icon').className='ti ti-circle-check upload-icon';
+    document.getElementById('subBase').textContent=file.name;
+    showAlert('alertBase',`Base salva com ${Object.keys(map).length} SKUs${ok?' — permanente neste navegador':' (sessão atual)'}`, 'success');
+    updateBaseUI();renderPreview(map);checkBtn();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function updateBaseUI(){
+  const count=Object.keys(baseSkus).length;
+  const pill=document.getElementById('topPill');
+  document.getElementById('topPillTxt').textContent=count>0?count+' SKUs carregados':'Base não carregada';
+  pill.className=count>0?'base-pill':'base-pill empty';
+  const bar=document.getElementById('baseStatusBar');
+  const info=document.getElementById('baseInfo');
+  if(count>0){
+    bar.innerHTML=`<div class="alert alert-success" style="margin-bottom:1.5rem;"><i class="ti ti-circle-check"></i>Base carregada — ${count} SKUs. Para atualizar, vá em <strong>Base de SKUs</strong></div>`;
+    info.className='base-info ok';
+    info.innerHTML=`<i class="ti ti-circle-check" style="font-size:22px;color:var(--success);"></i><div style="flex:1;"><div style="font-size:14px;font-weight:600;">${count} SKUs na base</div><div style="font-size:12px;color:var(--text2);">Salvo neste navegador</div></div><button class="btn-danger" onclick="resetBase()"><i class="ti ti-trash"></i>Limpar</button>`;
+  } else {
+    bar.innerHTML='';
+    info.className='base-info';
+    info.innerHTML=`<i class="ti ti-database" style="font-size:22px;color:var(--text3);"></i><div style="flex:1;"><div style="font-size:14px;font-weight:600;">Nenhuma base carregada</div><div style="font-size:12px;color:var(--text2);">Faça o upload abaixo</div></div>`;
+  }
+}
+
+function resetBase(){if(!confirm('Apagar a base de SKUs?'))return;limparBase();baseSkus={};updateBaseUI();checkBtn();document.getElementById('basePreview').style.display='none';}
+
+function renderPreview(map){
+  document.getElementById('previewCount').textContent=Object.keys(map).length;
+  document.getElementById('previewBody').innerHTML=Object.entries(map).slice(0,10).map(([sku,v])=>`<tr><td class="mono">${sku}</td><td class="mono">${v.spu}</td><td>${v.titulo}</td><td>${v.cor}</td><td>${v.tamanho}</td></tr>`).join('');
+  document.getElementById('basePreview').style.display='block';
+}
+
+function handleArmazem(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const wb=XLSX.read(e.target.result,{type:'array'});
+    dataArmazem=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+    document.getElementById('boxArmazem').classList.add('loaded');
+    document.querySelector('#boxArmazem .upload-icon').className='ti ti-circle-check upload-icon';
+    document.getElementById('subArmazem').textContent=file.name;
+    checkBtn();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function handleVendas(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const wb=XLSX.read(e.target.result,{type:'array'});
+    dataVendas=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+    document.getElementById('boxVendas').classList.add('loaded');
+    document.querySelector('#boxVendas .upload-icon').className='ti ti-circle-check upload-icon';
+    document.getElementById('subVendas').textContent=file.name;
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function calcularCurvaABC(){
+  if(!dataVendas){mapCurvaABC={};return;}
+  // Soma unidades vendidas por SKU
+  const vendas={};
+  for(const row of dataVendas){
+    const sku=String(row['SKU']||'').trim();if(!sku)continue;
+    const un=parseFloat(row['Unidades Vendidas'])||0;
+    vendas[sku]=(vendas[sku]||0)+un;
+  }
+  const totalGeral=Object.values(vendas).reduce((a,b)=>a+b,0);
+  if(totalGeral===0){mapCurvaABC={};return;}
+  // Ordena decrescente
+  const sorted=Object.entries(vendas).sort((a,b)=>b[1]-a[1]);
+  let acum=0;
+  mapCurvaABC={};
+  for(const[sku,un]of sorted){
+    const pct=(un/totalGeral)*100;
+    acum+=pct;
+    const curva=acum-pct<80?'A':acum-pct<95?'B':'C';
+    mapCurvaABC[sku]={curva,unidades:un,pct:pct.toFixed(2)};
+  }
+}
+
+function checkBtn(){document.getElementById('btnProcessar').disabled=!(Object.keys(baseSkus).length>0&&dataArmazem);}
+
+function updateFormula(){
+  const d=parseInt(document.getElementById('diasPadrao').value)||0;
+  const l=parseInt(document.getElementById('leadTime').value)||0;
+  const t=d+l;
+  document.getElementById('coberturaReal').textContent=t>0?t+' dias':'— dias';
+  document.getElementById('fDias').textContent=t>0?`${t} dias (${d}+${l})`:'(alvo + lead time)';
+}
+
+function processar(){
+  const diasPadrao=parseInt(document.getElementById('diasPadrao').value)||45;
+  const leadTime=parseInt(document.getElementById('leadTime').value)||0;
+  updateFormula();
+  calcularCurvaABC();
+  const temABC=Object.keys(mapCurvaABC).length>0;
+  document.getElementById('abcLegend').style.display=temABC?'flex':'none';
+
+  const mapSPU={};
+  for(const row of dataArmazem){
+    const sku=String(row['SKU']||'').trim();if(!sku)continue;
+    const media=parseFloat(row['Média Diária de Saídas de Vendas'])||0;if(media<=0)continue;
+    const estoque=parseFloat(row['Estoque Atual'])||0;
+    const emTransito=parseFloat(row['Em Trânsito'])||0;
+    const base=baseSkus[sku]||{spu:sku,titulo:String(row['Nome do Produto']||sku).trim(),cor:'-',tamanho:'-'};
+    const spu=base.spu||sku;
+    const abc=mapCurvaABC[sku]||null;
+    const item={sku,spu,produto:base.titulo,cor:base.cor||'-',tamanho:base.tamanho||'-',estoque,emTransito,media,diasAlvo:diasPadrao,leadTime,obs:'',
+      curva:abc?abc.curva:'-',
+      unidadesVendidas:abc?abc.unidades:0,
+      pctVendas:abc?abc.pct:'0.00',
+      get diasTotal(){return this.diasAlvo+this.leadTime;},
+      get cobertura(){return this.media>0?Math.round((this.estoque+this.emTransito)/this.media):999;},
+      get produzir(){const p=Math.ceil(this.media*this.diasTotal)-this.estoque-this.emTransito;return p>0?p:0;}
+    };
+    if(!mapSPU[spu])mapSPU[spu]={spu,nome:base.titulo,itens:[]};
+    mapSPU[spu].itens.push(item);
+  }
+  grupos=Object.values(mapSPU);
+  grupos.forEach(g=>g.itens.sort((a,b)=>{
+    // Ordena por curva A > B > C dentro de cada produto
+    const co={'A':0,'B':1,'C':2,'-':3};
+    return (co[a.curva]||3)-(co[b.curva]||3)||a.cor.localeCompare(b.cor);
+  }));
+  grupos.sort((a,b)=>Math.min(...a.itens.map(i=>i.cobertura))-Math.min(...b.itens.map(i=>i.cobertura)));
+  filtroAtivo='todos';
+  renderStats();renderFiltros();renderAcordeons();
+  document.getElementById('resultado').style.display='block';
+  document.getElementById('emptyState').style.display='none';
+}
+
+function getStatus(r){
+  if(r.cobertura<=7)return{label:'Crítico',cls:'badge-danger',key:'critico'};
+  if(r.cobertura<=r.diasTotal*0.5)return{label:'Baixo',cls:'badge-warning',key:'baixo'};
+  if(r.produzir>0)return{label:'Repor',cls:'badge-warning',key:'repor'};
+  return{label:'OK',cls:'badge-success',key:'ok'};
+}
+function grupoStatus(g){
+  const keys=g.itens.map(i=>getStatus(i).key);
+  if(keys.includes('critico'))return{label:'Crítico',cls:'badge-danger'};
+  if(keys.includes('baixo'))return{label:'Baixo',cls:'badge-warning'};
+  if(keys.includes('repor'))return{label:'Repor',cls:'badge-warning'};
+  return{label:'OK',cls:'badge-success'};
+}
+function getCurvaCls(c){return c==='A'?'badge-a':c==='B'?'badge-b':c==='C'?'badge-c':'';}
+
+function renderStats(){
+  const todos=grupos.flatMap(g=>g.itens);
+  const c=todos.filter(r=>getStatus(r).key==='critico').length;
+  const b=todos.filter(r=>getStatus(r).key==='baixo').length;
+  const rp=todos.filter(r=>r.produzir>0).length;
+  const temABC=Object.keys(mapCurvaABC).length>0;
+  const curvaA=temABC?todos.filter(r=>r.curva==='A').length:null;
+  document.getElementById('statsGrid').innerHTML=`
+    <div class="stat"><div class="stat-label">Total SKUs</div><div class="stat-value">${todos.length}</div></div>
+    <div class="stat"><div class="stat-label">Críticos ≤7 dias</div><div class="stat-value red">${c}</div></div>
+    <div class="stat"><div class="stat-label">Para repor</div><div class="stat-value yellow">${rp}</div></div>
+    <div class="stat"><div class="stat-label">${temABC?'Curva A (estrelas)':'Estoque baixo'}</div><div class="stat-value">${temABC?curvaA:b}</div></div>`;
+}
+
+function renderFiltros(){
+  const temABC=Object.keys(mapCurvaABC).length>0;
+  const base=['todos','critico','baixo','repor','ok'];
+  const abc=temABC?['curva-a','curva-b','curva-c']:[];
+  const labels={todos:'Todos',critico:'Críticos',baixo:'Baixo',repor:'Para repor',ok:'OK','curva-a':'Curva A','curva-b':'Curva B','curva-c':'Curva C'};
+  document.getElementById('filterRow').innerHTML=[...base,...abc].map(f=>`<button class="filter-btn ${filtroAtivo===f?'active':''}" onclick="setFiltro('${f}')">${labels[f]}</button>`).join('');
+}
+function setFiltro(f){filtroAtivo=f;renderFiltros();renderAcordeons();}
+
+function renderAcordeons(){
+  let gF=grupos;
+  if(filtroAtivo==='todos') gF=grupos;
+  else if(filtroAtivo==='repor') gF=grupos.filter(g=>g.itens.some(i=>i.produzir>0));
+  else if(filtroAtivo==='curva-a') gF=grupos.filter(g=>g.itens.some(i=>i.curva==='A'));
+  else if(filtroAtivo==='curva-b') gF=grupos.filter(g=>g.itens.some(i=>i.curva==='B'));
+  else if(filtroAtivo==='curva-c') gF=grupos.filter(g=>g.itens.some(i=>i.curva==='C'));
+  else gF=grupos.filter(g=>g.itens.some(i=>getStatus(i).key===filtroAtivo));
+
+  const temABC=Object.keys(mapCurvaABC).length>0;
+  const list=document.getElementById('accordionList');
+  if(!gF.length){list.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text2);font-size:13px;">Nenhum produto neste filtro</div>';return;}
+  list.innerHTML=gF.map((g,gi)=>{
+    const st=grupoStatus(g);
+    const totalR=g.itens.reduce((s,i)=>s+i.produzir,0);
+    const melhorCurva=g.itens.find(i=>i.curva==='A')?'A':g.itens.find(i=>i.curva==='B')?'B':g.itens.find(i=>i.curva==='C')?'C':null;
+    return `<div class="acc" id="acc-${gi}"><div class="acc-hdr" id="hdr-${gi}" onclick="toggleAcc(${gi})">
+      <span class="acc-spu">${g.spu}</span>
+      <span class="acc-name">${g.nome}</span>
+      <div class="acc-meta">
+        <span style="font-size:12px;color:var(--text3);">${g.itens.length} var.</span>
+        ${totalR>0?`<span style="font-size:12px;color:var(--danger);font-weight:600;">+${totalR} un.</span>`:''}
+        ${temABC&&melhorCurva?`<span class="badge ${getCurvaCls(melhorCurva)}">${melhorCurva}</span>`:''}
+        <span class="badge ${st.cls}">${st.label}</span>
+        <i class="ti ti-chevron-down acc-chevron"></i>
+      </div>
+    </div>
+    <div class="acc-body" id="body-${gi}"><div class="tbl-wrap"><table class="tbl"><thead><tr>
+      <th>Cor</th><th>Tamanho</th>
+      ${temABC?'<th>Curva</th><th>Un. Vendidas</th><th>% Vendas</th>':''}
+      <th>Estoque</th><th>Trânsito</th><th>Média/dia</th><th>Cobertura</th>
+      <th>Dias alvo</th><th>Lead time</th><th>Produzir</th><th>Status</th><th>Observação</th>
+    </tr></thead><tbody>
+    ${g.itens.map((r,ri)=>{
+      const s=getStatus(r);
+      const cob=r.cobertura>=999?'—':r.cobertura+' dias';
+      const cobCls=r.cobertura<=7?'cob-danger':r.cobertura<=r.diasTotal*0.5?'cob-warning':'';
+      return `<tr>
+        <td>${r.cor}</td><td>${r.tamanho}</td>
+        ${temABC?`<td>${r.curva!=='-'?`<span class="badge ${getCurvaCls(r.curva)}">${r.curva}</span>`:'<span style="color:var(--text3);">—</span>'}</td><td class="mono">${r.unidadesVendidas||'—'}</td><td class="mono">${r.curva!=='-'?r.pctVendas+'%':'—'}</td>`:''}
+        <td class="mono">${r.estoque}</td><td class="mono">${r.emTransito}</td>
+        <td class="mono">${r.media.toFixed(2)}</td>
+        <td class="mono ${cobCls}">${cob}</td>
+        <td><input type="number" class="dias-in" value="${r.diasAlvo}" min="1" max="365" onchange="updateDias('${g.spu}',${ri},'alvo',this.value)"></td>
+        <td><input type="number" class="dias-in" value="${r.leadTime}" min="0" max="365" onchange="updateDias('${g.spu}',${ri},'lead',this.value)"></td>
+        <td>${r.produzir>0?`<span class="prod-pos">${r.produzir}</span>`:'<span class="prod-zero">✓</span>'}</td>
+        <td><span class="badge ${s.cls}">${s.label}</span></td>
+        <td><input type="text" class="obs-in" placeholder="Observação..." value="${r.obs||''}" onchange="updateObs('${g.spu}',${ri},this.value)"></td>
+      </tr>`;}).join('')}
+    </tbody></table></div></div></div>`;}).join('');
+}
+
+function toggleAcc(gi){document.getElementById('hdr-'+gi).classList.toggle('open');document.getElementById('body-'+gi).classList.toggle('open');}
+function toggleAll(open){grupos.forEach((_,gi)=>{const h=document.getElementById('hdr-'+gi),b=document.getElementById('body-'+gi);if(!h||!b)return;h.classList[open?'add':'remove']('open');b.classList[open?'add':'remove']('open');});}
+function updateDias(spu,ri,tipo,val){const g=grupos.find(x=>x.spu===spu);if(!g)return;if(tipo==='alvo')g.itens[ri].diasAlvo=parseInt(val)||45;else g.itens[ri].leadTime=parseInt(val)||0;renderStats();renderAcordeons();}
+function updateObs(spu,ri,val){const g=grupos.find(x=>x.spu===spu);if(!g)return;g.itens[ri].obs=val;}
+
+function exportarXLSX(){
+  const wb=XLSX.utils.book_new();
+  const todos=grupos.flatMap(g=>g.itens);
+  const temABC=Object.keys(mapCurvaABC).length>0;
+  const headers=['SPU','Produto','SKU','Cor','Tamanho',
+    ...(temABC?['Curva ABC','Un. Vendidas','% Vendas']:[]),
+    'Estoque Atual','Em Trânsito','Média Diária','Dias Alvo','Lead Time','Cobertura (dias)','Produzir','Status','Observação'];
+  const rows=[headers];
+  for(const g of grupos){
+    for(const r of g.itens){
+      rows.push([g.spu,r.produto,r.sku,r.cor,r.tamanho,
+        ...(temABC?[r.curva,r.unidadesVendidas,r.curva!=='-'?parseFloat(r.pctVendas):0]:[]),
+        r.estoque,r.emTransito,parseFloat(r.media.toFixed(2)),r.diasAlvo,r.leadTime,
+        r.cobertura>=999?'':r.cobertura,r.produzir,getStatus(r).label,r.obs||'']);
+    }
+  }
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const colW=[{wch:14},{wch:30},{wch:12},{wch:16},{wch:12},
+    ...(temABC?[{wch:10},{wch:13},{wch:10}]:[]),
+    {wch:13},{wch:13},{wch:13},{wch:11},{wch:11},{wch:15},{wch:10},{wch:10},{wch:30}];
+  ws['!cols']=colW;
+
+  const statusColors={'Crítico':'FFCDD2','Baixo':'FFF9C4','Repor':'FFE0B2','OK':'C8E6C9'};
+  const statusIdx=headers.indexOf('Status');
+  for(let ri=1;ri<rows.length;ri++){
+    const bg=statusColors[rows[ri][statusIdx]]||'FFFFFF';
+    for(let ci=0;ci<headers.length;ci++){
+      const addr=XLSX.utils.encode_cell({r:ri,c:ci});
+      if(!ws[addr])ws[addr]={v:rows[ri][ci],t:'s'};
+      ws[addr].s={fill:{patternType:'solid',fgColor:{rgb:bg}},border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}},alignment:{vertical:'center'}};
+      if(typeof rows[ri][ci]==='number')ws[addr].t='n';
+    }
+  }
+  for(let ci=0;ci<headers.length;ci++){
+    const addr=XLSX.utils.encode_cell({r:0,c:ci});
+    ws[addr].s={fill:{patternType:'solid',fgColor:{rgb:'1A2E1A'}},font:{color:{rgb:'FFFFFF'},bold:true,sz:11},alignment:{horizontal:'center',vertical:'center'},border:{top:{style:'thin',color:{rgb:'000000'}},bottom:{style:'thin',color:{rgb:'000000'}},left:{style:'thin',color:{rgb:'000000'}},right:{style:'thin',color:{rgb:'000000'}}}};
+  }
+  ws['!freeze']={xSplit:0,ySplit:1};
+  XLSX.utils.book_append_sheet(wb,ws,'Reposição de Estoque');
+
+  // Aba Curva ABC separada
+  if(temABC){
+    const abcRows=[['Curva','SKU','Produto','Cor','Tamanho','Un. Vendidas','% Vendas']];
+    const todosABC=[...todos].filter(r=>r.curva!=='-').sort((a,b)=>parseFloat(b.pctVendas)-parseFloat(a.pctVendas));
+    for(const r of todosABC){
+      abcRows.push([r.curva,r.sku,r.produto,r.cor,r.tamanho,r.unidadesVendidas,parseFloat(r.pctVendas)]);
+    }
+    const wsABC=XLSX.utils.aoa_to_sheet(abcRows);
+    wsABC['!cols']=[{wch:8},{wch:12},{wch:30},{wch:16},{wch:12},{wch:13},{wch:10}];
+    const abcColors={'A':'1A2E1A','B':'2d5a3d','C':'9b9890'};
+    for(let ri=1;ri<abcRows.length;ri++){
+      const bg=abcRows[ri][0]==='A'?'E8F5E9':abcRows[ri][0]==='B'?'F1F8E9':'F5F5F5';
+      for(let ci=0;ci<7;ci++){
+        const addr=XLSX.utils.encode_cell({r:ri,c:ci});
+        if(!wsABC[addr])wsABC[addr]={v:abcRows[ri][ci],t:'s'};
+        wsABC[addr].s={fill:{patternType:'solid',fgColor:{rgb:bg}},border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}};
+        if(typeof abcRows[ri][ci]==='number')wsABC[addr].t='n';
+      }
+    }
+    for(let ci=0;ci<7;ci++){
+      const addr=XLSX.utils.encode_cell({r:0,c:ci});
+      wsABC[addr].s={fill:{patternType:'solid',fgColor:{rgb:'1A2E1A'}},font:{color:{rgb:'FFFFFF'},bold:true,sz:11},alignment:{horizontal:'center',vertical:'center'}};
+    }
+    XLSX.utils.book_append_sheet(wb,wsABC,'Curva ABC');
+  }
+
+  // Aba resumo
+  const resumo=[['Status','Qtd SKUs','Total a Produzir']];
+  for(const s of['Crítico','Baixo','Repor','OK']){const it=todos.filter(r=>getStatus(r).label===s);resumo.push([s,it.length,it.reduce((a,i)=>a+i.produzir,0)]);}
+  resumo.push(['','',''],['Total geral',todos.length,todos.reduce((a,i)=>a+i.produzir,0)]);
+  const wsR=XLSX.utils.aoa_to_sheet(resumo);
+  wsR['!cols']=[{wch:12},{wch:12},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,wsR,'Resumo');
+
+  const date=new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb,`reposicao_estoque_${date}.xlsx`);
+}
+
+function showAlert(id,msg,type){
+  document.getElementById(id).innerHTML=`<div class="alert alert-${type}"><i class="ti ti-circle-check"></i>${msg}</div>`;
+  setTimeout(()=>{const el=document.getElementById(id);if(el)el.innerHTML='';},5000);
+}
+</script>
+</body>
+</html>
